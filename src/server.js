@@ -61,7 +61,7 @@ server.post(`${api_route}`, async (req, res) => {
         if (!nombre || !precio || !categoria) {
             return res.status(400).send({'message': 'Faltan datos relevantes'});
         }
-        const collection = await connectToCollection('muebleria');
+        const collection = await connectToCollection('muebles');
         await collection.insertOne({codigo: 16, nombre, precio: Number(precio), categoria});
         const getNewItem = await collection.findOne({codigo: 16});
         return res.status(201).send({'message': 'Registro creado', 'payload': getNewItem});
@@ -72,15 +72,16 @@ server.post(`${api_route}`, async (req, res) => {
     }
 });
 server.delete(`${api_route}/:codigo`, async (req, res) => {
-    const {codigoBody } = req.body;
+    const {codigo: codigoParam } = req.params;
     try {
-        const collection = await connectToCollection('muebleria');
-        const itemToDelete = collection.findOne({codigo: Number(codigoBody)});
+        const collection = await connectToCollection('muebles');
+        const itemToDelete = await collection.findOne({codigo: Number(codigoParam)});
+
         if (!itemToDelete) {
-            res.status(400).send({'message': 'El código no corresponde a un mueble registrado'});
+            return res.status(400).send({'message': 'El código no corresponde a un mueble registrado'});
         }
-        await collection.deleteOne({codigo: Number(codigoBody)});
-        res.status(200).send({'message': 'Registro eliminado'});
+        await collection.deleteOne({codigo: Number(codigoParam)});
+        return res.status(200).send({'message': 'Registro eliminado'});
     } catch (err) {
         res.status(500).send({'error': 'Se ha generado un error en el servidor'});
     } finally {
@@ -89,24 +90,33 @@ server.delete(`${api_route}/:codigo`, async (req, res) => {
 });
 server.put(`${api_route}/:codigo`, async (req, res) => {
     const {codigo: codigoParam} = req.params;
-    const {nombre, precio, categoria } = req.body;
+    const {nombre, precio: precioBody, categoria } = req.body;
+
     try {
-        if (!nombre || !precio || !categoria) {
+        if (!nombre || !precioBody || !categoria) {
             return res.status(400).send({'message': 'Faltan datos relevantes'});
         }
         const collection = await connectToCollection('muebles');
         const itemToUpdate = await collection.findOne({codigo: Number(codigoParam)});
-        console.log(itemToUpdate);
+
         if (itemToUpdate === null) {
-            return res.status(400).send({'message': 'El código no corresponde a un mueble registrado '});
+            return res.status(400).send({'message': 'El código no corresponde a un mueble registrado'});
         }
-        await collection.findOneAndUpdate({codigo: Number(codigoParam)}, {nombre, precio: Number(precio), categoria });
+        // await collection.findOneAndUpdate({codigo: Number(codigoParam)}, {$set: {nombre, precio: Number(precio), categoria }});
+        await collection.findOneAndUpdate({codigo: Number(codigoParam)}, {$set: {
+            nombre,
+            precio: Number(precioBody),
+            categoria
 
-        const updatedProd = collection.find({codigo: Number(codigoParam)});
+        }});
 
-        return res.status(200).send({'message': 'Registro actualizado', ' payload': updatedProd});
+        const updatedProd = await collection.findOne({codigo: Number(codigoParam)});
+
+        return res.status(200).send({'message': 'Registro actualizado',
+            payload: updatedProd});
     } catch (err) {
-        res.status(400).send({'message': 'Faltan datos relevantes'});
+        console.log(err.message);
+        res.status(500).send({'message': 'Se ha generado un error en el servidor'});
     } finally {
         disconnectFromMongo();
     }
