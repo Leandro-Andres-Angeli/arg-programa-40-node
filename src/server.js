@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
 const { SERVER_PORT, SERVER_HOST } = process.env;
 const api_route = `/api/v1/muebles`;
 const {
@@ -57,15 +58,22 @@ server.get(`${api_route}/:codigo`, async (req, res) => {
 });
 server.post(`${api_route}`, async (req, res) => {
     const {nombre, precio, categoria } = req.body;
+
     try {
         if (!nombre || !precio || !categoria) {
             return res.status(400).send({'message': 'Faltan datos relevantes'});
         }
         const collection = await connectToCollection('muebles');
-        await collection.insertOne({codigo: 16, nombre, precio: Number(precio), categoria});
-        const getNewItem = await collection.findOne({codigo: 16});
+        // const sortedList = await collection.find().sort({codigo: -1}).toArray();
+        const [last_el] = await collection.find().sort({codigo: -1}).limit(1).toArray();
+
+        const codigo = last_el.codigo + 1;
+
+        await collection.insertOne({codigo, nombre, precio: Number(precio), categoria});
+        const getNewItem = await collection.findOne({codigo});
         return res.status(201).send({'message': 'Registro creado', 'payload': getNewItem});
     } catch (err) {
+        console.log(err.message);
         return res.status(500).send({'error': 'Se ha generado un error en el servidor'});
     } finally {
         disconnectFromMongo();
