@@ -22,7 +22,7 @@ server.get(`${api_route}`, async (req, res) => {
             muebles = collection.find({categoria}).sort({nombre: 1});
         }
         if (precio_gte) {
-            muebles = collection.find({precio: {$gte: Number(precio_gte)}}).sort({precio: 1});
+            muebles = collection.find({precio: {$gte: Number(precio_gte)}}).sort({precio: 1, nombre: 1});
         }
         if (precio_lte) {
             muebles = collection.find({precio: {$lte: Number(precio_lte)}}).sort({precio: -1});
@@ -102,6 +102,7 @@ server.put(`${api_route}/:codigo`, async (req, res) => {
         if (itemToUpdate === null) {
             return res.status(400).send({'message': 'El código no corresponde a un mueble registrado'});
         }
+
         // await collection.findOneAndUpdate({codigo: Number(codigoParam)}, {$set: {nombre, precio: Number(precio), categoria }});
         await collection.findOneAndUpdate({codigo: Number(codigoParam)}, {$set: {
             nombre,
